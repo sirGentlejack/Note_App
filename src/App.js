@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect } from "react"
 import "./App.css";
 import Sidebar from "./components/Sidebar"
 import Editor from "./components/Editor"
@@ -7,10 +7,17 @@ import Split from "react-split"
 import {nanoid} from "nanoid"
 
 export default function App() {
-  const [notes, setNotes] = React.useState([])
+  const [notes, setNotes] = React.useState(
+    // sync notes with localStorage 
+  () => JSON.parse(localStorage.getItem("notes")) || []
+    )
   const [currentNoteId, setCurrentNoteId] = React.useState(
       (notes[0] && notes[0].id) || ""
   )
+
+  useEffect(() => {
+    localStorage.setItem("notes", JSON.stringify(notes))
+  }, [notes])
   
   function createNewNote() {
       const newNote = {
@@ -22,11 +29,32 @@ export default function App() {
   }
   
   function updateNote(text) {
-      setNotes(oldNotes => oldNotes.map(oldNote => {
-          return oldNote.id === currentNoteId
-              ? { ...oldNote, body: text }
-              : oldNote
-      }))
+    // Put the most recently-modified note at the top
+    setNotes(oldNotes => {
+        const newArray = []
+        for(let i = 0; i < oldNotes.length; i++){
+            const oldNote = oldNotes[i]
+            if(oldNote.id === currentNoteId){
+                newArray.unshift({...oldNote, body:text})
+            } else{
+                newArray.push(oldNote)
+            }
+        }
+        return newArray
+    })
+
+    // this doest rearrange to the top
+
+    //   setNotes(oldNotes => oldNotes.map(oldNote => {
+    //       return oldNote.id === currentNoteId
+    //           ? { ...oldNote, body: text }
+    //           : oldNote
+    //   }))
+  }
+
+  function deleteNote(event,noteId){
+    event.stopPropagation()
+     setNotes(oldNotes => oldNotes.filter(note => note.id !== noteId))
   }
   
   function findCurrentNote() {
@@ -50,6 +78,7 @@ export default function App() {
                   currentNote={findCurrentNote()}
                   setCurrentNoteId={setCurrentNoteId}
                   newNote={createNewNote}
+                  deleteNote={deleteNote}
               />
               {
                   currentNoteId && 
